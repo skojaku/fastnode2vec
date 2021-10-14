@@ -95,54 +95,16 @@ def _random_walk_weighted(indptr, indices, data, walk_length, p, q, t):
 
 
 class Graph:
-    def __init__(self, edges, directed, weighted, n_edges=None):
-        if n_edges is None:
-            try:
-                n_edges = len(edges)
-            except TypeError:
-                pass
+    def __init__(self, A):
+        self.weighted = (~np.isclose(np.min(A.data), 1)) or (~np.isclose(np.max(A.data), 1))
 
-        self.weighted = weighted
-
-        nodes = defaultdict(lambda: len(nodes))
-
-        from_ = []
-        to = []
-        if weighted:
-            data = []
-        for tpl in tqdm(edges, desc="Reading graph", total=n_edges):
-            if weighted:
-                a, b, w = tpl
-                data.append(w)
-            else:
-                a, b = tpl
-            a = nodes[a]
-            b = nodes[b]
-            from_.append(a)
-            to.append(b)
-            if not directed:
-                from_.append(b)
-                to.append(a)
-                if weighted:
-                    data.append(w)
-
-        if not weighted:
-            data = np.ones(len(from_), dtype=bool)
-
-        n = len(nodes)
-
-        edges = csr_matrix((data, (from_, to)), shape=(n, n))
-        edges.sort_indices()
-        self.indptr = edges.indptr
-        self.indices = edges.indices
-        if weighted:
-            data = edges.data / edges.sum(axis=1).A1.repeat(np.diff(self.indptr))
+        n = A.shape[0]
+        A.sort_indices()
+        self.indptr = A.indptr
+        self.indices = A.indices
+        if self.weighted:
+            data = A.data / A.sum(axis=1).A1.repeat(np.diff(self.indptr))
             self.data = _csr_row_cumsum(self.indptr, data)
-
-        node_names = [None] * n
-        for name, i in nodes.items():
-            node_names[i] = name
-        self.node_names = np.array(node_names)
 
     def generate_random_walk(self, walk_length, p, q, start):
         if self.weighted:
@@ -151,4 +113,4 @@ class Graph:
             )
         else:
             walk = _random_walk(self.indptr, self.indices, walk_length, p, q, start)
-        return self.node_names[walk].tolist()
+        return walk.tolist()
