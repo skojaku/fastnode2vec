@@ -1,6 +1,6 @@
 # fastnode2vec
 
-This is an adaptation of `fastnode2vec` implemented by Louis Abraham. All adaptations are done for my personal use. 
+This is an adaptation of [fastnode2vec](https://github.com/louisabraham/fastnode2vec) implemented by Louis Abraham. All adaptations are done for my personal use. 
 
 Please cite the developper's repository if you use this package:
 
