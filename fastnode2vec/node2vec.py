@@ -20,7 +20,6 @@ class Node2Vec(Word2Vec):
         p=1.0,
         q=1.0,
         workers=1,
-        epochs=1,
         batch_walks=None,
         seed=None,
     ):
@@ -37,7 +36,6 @@ class Node2Vec(Word2Vec):
         self.p = p
         self.q = q
         self.seed = seed
-        self.epochs = epochs
 
     
     def fit(self, A):
@@ -76,7 +74,7 @@ class Node2Vec(Word2Vec):
 
             def pbar(it):
                 return tqdm(
-                    it, desc="Training", total=self.epochs * self.num_nodes 
+                    it, desc="Training", total=self.num_walks * self.num_nodes 
                 )
 
         else:
@@ -86,7 +84,7 @@ class Node2Vec(Word2Vec):
 
         super().train(
             pbar(gen_nodes()),
-            total_examples=self.epochs * self.num_nodes,
+            total_examples=self.num_walks * self.num_nodes,
             epochs=1,
             **kwargs,
         )
