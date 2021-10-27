@@ -14,8 +14,9 @@ def set_seed(seed):
 class Node2Vec(Word2Vec):
     def __init__(
         self,
-        walk_length=40,
+        num_walks=10,
         window_length=10,
+        walk_length=40,
         p=1.0,
         q=1.0,
         workers=1,
@@ -31,6 +32,7 @@ class Node2Vec(Word2Vec):
         self.window_length = window_length
         self.workers = workers
         self.batch_words = batch_words
+        self.num_walks = num_walks
         self.walk_length = walk_length
         self.p = p
         self.q = q
@@ -43,10 +45,10 @@ class Node2Vec(Word2Vec):
         self.num_nodes = A.shape[0]
 
     def transform(self, dim, *, progress_bar=True, **kwargs):
-        def gen_nodes(epochs):
+        def gen_nodes():
             if self.seed is not None:
                 np.random.seed(self.seed)
-            for _ in range(epochs):
+            for _ in range(self.num_walks):
                 for i in np.random.permutation(self.num_nodes):
                     # dummy walk with same length
                     yield [i] * self.walk_length
@@ -83,7 +85,7 @@ class Node2Vec(Word2Vec):
                 return it
 
         super().train(
-            pbar(gen_nodes(self.epochs)),
+            pbar(gen_nodes()),
             total_examples=self.epochs * self.num_nodes,
             epochs=1,
             **kwargs,
