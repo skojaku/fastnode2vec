@@ -14,12 +14,12 @@ def set_seed(seed):
 class Node2Vec(Word2Vec):
     def __init__(
         self,
-        walk_length=40,
+        walk_length=80,
         window_length=10,
         p=1.0,
         q=1.0,
         workers=1,
-        epochs=1,
+        num_walks=10,
         batch_walks=None,
         seed=None,
     ):
@@ -35,8 +35,11 @@ class Node2Vec(Word2Vec):
         self.p = p
         self.q = q
         self.seed = seed
-        self.epochs = epochs
+        self.num_walks = num_walks
 
+        self.args = {
+            "sg":1,"min_count":1
+        }
     
     def fit(self, A):
         self.graph = Graph(A)
@@ -52,21 +55,18 @@ class Node2Vec(Word2Vec):
                     yield [i] * self.walk_length
 
 
-        args = {}
         if gensim_version < "4.0.0":
-            args["iter"] = 1
-            args["size"] = dim
+            self.args["iter"] = 1
+            self.args["size"] = dim
         else:
-            args["epochs"] = 1
-            args["vector_size"] = dim
+            self.args["epochs"] = 1
+            self.args["vector_size"] = dim
 
         super().__init__(
-            sg=1,
-            min_count=1,
             window=self.window_length,
             workers=self.workers,
             batch_words=self.batch_words,
-            **args,
+            **self.args,
         )
         self.build_vocab(([w] for w in range(self.num_nodes)))
 
@@ -74,7 +74,7 @@ class Node2Vec(Word2Vec):
 
             def pbar(it):
                 return tqdm(
-                    it, desc="Training", total=self.epochs * self.num_nodes 
+                    it, desc="Training", total=self.num_walks * self.num_nodes 
                 )
 
         else:
@@ -83,8 +83,8 @@ class Node2Vec(Word2Vec):
                 return it
 
         super().train(
-            pbar(gen_nodes(self.epochs)),
-            total_examples=self.epochs * self.num_nodes,
+            pbar(gen_nodes(self.num_walks)),
+            total_examples=self.num_walks * self.num_nodes,
             epochs=1,
             **kwargs,
         )
@@ -108,3 +108,29 @@ class Node2Vec(Word2Vec):
             set_seed(self.seed)
         sentences = [self.generate_random_walk(w[0]) for w in sentences]
         return super()._do_train_job(sentences, alpha, inits)
+
+
+class DeepWalk(Node2Vec):
+    def __init__(
+        self,
+        walk_length=80,
+        window_length=10,
+        p=1.0,
+        q=1.0,
+        workers=1,
+        num_walks=10,
+        batch_walks=None,
+        seed=None,
+    ):
+        super().__init__(
+            walk_length=walk_length,
+            window_length=window_length,
+            p=p,
+            q=q,
+            workers=workers,
+            num_walks=num_walks,
+            batch_walks=batch_walks,
+            seed=seed,
+        )
+        self.args["sg"] = 0
+        self.args["hs"] = 1
