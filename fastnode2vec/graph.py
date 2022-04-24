@@ -36,11 +36,16 @@ def _random_walk(indptr, indices, walk_length, p, q, t):
     prob_1 = 1 / max_prob
     prob_2 = 1 / q / max_prob
 
-    walk = np.empty(walk_length, dtype=indices.dtype)
+    walk = -np.ones(walk_length, dtype=indices.dtype)
     walk[0] = t
-    walk[1] = np.random.choice(_neighbors(indptr, indices, t))
+    neighbors = _neighbors(indptr, indices, t)
+    if len(neighbors) == 0:
+        return walk
+    walk[1] = np.random.choice(neighbors)
     for j in range(2, walk_length):
         neighbors = _neighbors(indptr, indices, walk[j - 1])
+        if len(neighbors) == 0:
+            break
         if p == q == 1:
             # faster version
             walk[j] = np.random.choice(neighbors)
@@ -67,13 +72,18 @@ def _random_walk_weighted(indptr, indices, data, walk_length, p, q, t):
     prob_1 = 1 / max_prob
     prob_2 = 1 / q / max_prob
 
-    walk = np.empty(walk_length, dtype=indices.dtype)
+    walk = -np.ones(walk_length, dtype=indices.dtype)
     walk[0] = t
-    walk[1] = _neighbors(indptr, indices, t)[
-        np.searchsorted(_neighbors(indptr, data, t), np.random.rand())
-    ]
+    neighbors = _neighbors(indptr, indices, t)
+    if len(neighbors) == 0:
+        return walk
+    walk[1] = neighbors[np.searchsorted(_neighbors(indptr, data, t), np.random.rand())]
     for j in range(2, walk_length):
         neighbors = _neighbors(indptr, indices, walk[j - 1])
+
+        if len(neighbors) == 0:
+            break
+
         neighbors_p = _neighbors(indptr, data, walk[j - 1])
         if p == q == 1:
             # faster version
@@ -96,7 +106,9 @@ def _random_walk_weighted(indptr, indices, data, walk_length, p, q, t):
 
 class Graph:
     def __init__(self, A):
-        self.weighted = (~np.isclose(np.min(A.data), 1)) or (~np.isclose(np.max(A.data), 1))
+        self.weighted = (~np.isclose(np.min(A.data), 1)) or (
+            ~np.isclose(np.max(A.data), 1)
+        )
 
         n = A.shape[0]
         A.sort_indices()
@@ -113,4 +125,5 @@ class Graph:
             )
         else:
             walk = _random_walk(self.indptr, self.indices, walk_length, p, q, start)
+        walk = walk[walk >= 0]
         return walk.tolist()
