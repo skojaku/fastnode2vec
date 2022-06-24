@@ -18,6 +18,8 @@ class Node2Vec(Word2Vec):
         window_length=10,
         p=1.0,
         q=1.0,
+        start_node_sampling_method="uniform",
+        start_node_sampling_prob=None,
         workers=1,
         num_walks=10,
         batch_walks=None,
@@ -36,24 +38,35 @@ class Node2Vec(Word2Vec):
         self.q = q
         self.seed = seed
         self.num_walks = num_walks
+        self.start_node_sampling_method = start_node_sampling_method
+        self.start_node_sampling_prob = start_node_sampling_prob
+        self.args = {"sg": 1, "min_count": 1}
 
-        self.args = {
-            "sg":1,"min_count":1
-        }
-    
     def fit(self, A):
         self.graph = Graph(A)
         self.num_nodes = A.shape[0]
 
-    def transform(self, dim, *, progress_bar=True, **kwargs):
-        def gen_nodes(epochs):
+        if self.start_node_sampling_method == "degree":
+            self.start_node_sampling_prob = np.array(A.sum(axis=0)).reshape(-1)
+        elif self.start_node_sampling_method == "custom":
+            self.start_node_sampling_prob /= np.sum(self.start_node_sample_prob)
+
+    def transform(self, dim, progress_bar=True, **kwargs):
+        def gen_nodes(epochs, prob=None):
             if self.seed is not None:
                 np.random.seed(self.seed)
+            if prob is None:
+                prob = np.ones(self.num_nodes) / self.num_nodes
+                replace = False
+            else:
+                replace = True
             for _ in range(epochs):
-                for i in np.random.permutation(self.num_nodes):
+                node_list = np.random.choice(
+                    self.num_nodes, size=self.num_nodes, p=prob, replace=replace
+                )
+                for i in node_list:
                     # dummy walk with same length
                     yield [i] * self.walk_length
-
 
         if gensim_version < "4.0.0":
             self.args["iter"] = 1
@@ -73,9 +86,7 @@ class Node2Vec(Word2Vec):
         if progress_bar:
 
             def pbar(it):
-                return tqdm(
-                    it, desc="Training", total=self.num_walks * self.num_nodes 
-                )
+                return tqdm(it, desc="Training", total=self.num_walks * self.num_nodes)
 
         else:
 
@@ -83,21 +94,19 @@ class Node2Vec(Word2Vec):
                 return it
 
         super().train(
-            pbar(gen_nodes(self.num_walks)),
+            pbar(gen_nodes(self.num_walks, self.start_node_sampling_prob)),
             total_examples=self.num_walks * self.num_nodes,
             epochs=1,
             **kwargs,
         )
-        
+
         self.in_vec = np.zeros((self.num_nodes, dim))
         self.out_vec = np.zeros((self.num_nodes, dim))
         for i in range(self.num_nodes):
             if i not in self.wv:
                 continue
             self.in_vec[i, :] = self.wv[i]
-            self.out_vec[i, :] = self.syn1neg[
-                self.wv.key_to_index[i]
-            ]
+            self.out_vec[i, :] = self.syn1neg[self.wv.key_to_index[i]]
         return self.in_vec
 
     def generate_random_walk(self, t):
@@ -108,29 +117,3 @@ class Node2Vec(Word2Vec):
             set_seed(self.seed)
         sentences = [self.generate_random_walk(w[0]) for w in sentences]
         return super()._do_train_job(sentences, alpha, inits)
-
-
-class DeepWalk(Node2Vec):
-    def __init__(
-        self,
-        walk_length=80,
-        window_length=10,
-        p=1.0,
-        q=1.0,
-        workers=1,
-        num_walks=10,
-        batch_walks=None,
-        seed=None,
-    ):
-        super().__init__(
-            walk_length=walk_length,
-            window_length=window_length,
-            p=p,
-            q=q,
-            workers=workers,
-            num_walks=num_walks,
-            batch_walks=batch_walks,
-            seed=seed,
-        )
-        self.args["sg"] = 0
-        self.args["hs"] = 1
