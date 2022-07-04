@@ -7,7 +7,7 @@ class LINE(Node2Vec):
     ):
         super().__init__(
             walk_length=walk_length,
-            window_length=2,
+            window_length=1,
             p=1,
             q=1,
             start_node_sampling_method="degree",
