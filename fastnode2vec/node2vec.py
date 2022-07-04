@@ -47,9 +47,10 @@ class Node2Vec(Word2Vec):
         self.num_nodes = A.shape[0]
 
         if self.start_node_sampling_method == "degree":
-            self.start_node_sampling_prob = np.array(A.sum(axis=0)).reshape(-1)
+            self.start_node_sampling_prob = np.array(A.sum(axis=0)).reshape(-1).astype(float)
+            self.start_node_sampling_prob /= np.sum(self.start_node_sampling_prob)
         elif self.start_node_sampling_method == "custom":
-            self.start_node_sampling_prob /= np.sum(self.start_node_sample_prob)
+            self.start_node_sampling_prob /= np.sum(self.start_node_sampling_prob)
 
     def transform(self, dim, progress_bar=True, **kwargs):
         def gen_nodes(epochs, prob=None):

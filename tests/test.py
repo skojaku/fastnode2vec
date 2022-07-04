@@ -12,6 +12,14 @@ class TestCalc(unittest.TestCase):
     def setUp(self):
         self.G = nx.karate_club_graph()
         self.A = nx.adjacency_matrix(self.G)
+    
+    def test_line(self):
+        model = fastnode2vec.LINE()
+        model.fit(self.A)
+        emb = model.transform(dim=32)
+
+        assert emb.shape[0] == self.A.shape[0]
+        assert emb.shape[1] == 32
 
     def test_node2vec(self):
         model = fastnode2vec.Node2Vec()
