@@ -27,7 +27,8 @@ Please cite the developper's repository if you use this package:
 ```python
     model = fastnode2vec.Node2Vec()
     model.fit(A)
-    emb = model.transform(dim=32)
+    center_vec = model.transform(dim=32)
+    context_vec = model.out_vec
 ```
 
 - `A`: adjacency matrix (`csr_matrix`)
