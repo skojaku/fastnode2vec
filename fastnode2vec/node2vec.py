@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+# @Author: Sadamori Kojaku
+# @Date:   2022-09-07 22:25:21
+# @Last Modified by:   Sadamori Kojaku
+# @Last Modified time: 2023-08-02 05:58:06
 from gensim.models import Word2Vec
 from gensim import __version__ as gensim_version
 import numpy as np
@@ -45,9 +50,12 @@ class Node2Vec(Word2Vec):
     def fit(self, A):
         self.graph = Graph(A)
         self.num_nodes = A.shape[0]
+        self.deg = np.array(A.sum(axis=0)).reshape(-1)
 
         if self.start_node_sampling_method == "degree":
-            self.start_node_sampling_prob = np.array(A.sum(axis=0)).reshape(-1).astype(float)
+            self.start_node_sampling_prob = (
+                np.array(A.sum(axis=0)).reshape(-1).astype(float)
+            )
             self.start_node_sampling_prob /= np.sum(self.start_node_sampling_prob)
         elif self.start_node_sampling_method == "custom":
             self.start_node_sampling_prob /= np.sum(self.start_node_sampling_prob)
@@ -82,7 +90,8 @@ class Node2Vec(Word2Vec):
             batch_words=self.batch_words,
             **self.args,
         )
-        self.build_vocab(([w] for w in range(self.num_nodes)))
+        self.build_vocab_from_freq({i: self.deg[i] for i in range(self.num_nodes)})
+        # self.build_vocab(([w] for w in range(self.num_nodes)))
 
         if progress_bar:
 

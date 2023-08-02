@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+# @Author: Sadamori Kojaku
+# @Date:   2022-09-07 22:25:21
+# @Last Modified by:   Sadamori Kojaku
+# @Last Modified time: 2023-08-02 05:56:01
 from collections import defaultdict
 
 import numpy as np
